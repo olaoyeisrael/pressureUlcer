@@ -14,7 +14,7 @@ const mqttRun = ()=>{
     if (topic === "smartbed/sensorinput") {
         try {
             const sensorData = JSON.parse(message.toString());
-            const { macAddress, temperature } = sensorData;
+            const { macAddress, temperature, pressure } = sensorData;
 
             // ✅ Find Bed Linked to This MAC Address
             let bed = await Bed.findOne({ macAddress });
@@ -28,15 +28,17 @@ const mqttRun = ()=>{
                     name: `Bed_${macAddress.substring(macAddress.length - 4)}`,  // e.g., "Bed_5678"
                     macAddress: macAddress,
                     assigned: true,
-                    lastTemperature: temperature    
+                    lastTemperature: temperature,
+                    pressure: pressure    
                 });
                 console.log(temperature)
+                console.log(pressure)
 
                 await bed.save();
                 console.log(`✅ New bed assigned: ${bed.name} (MAC: ${macAddress})`);
             }
 
-            console.log(`📡 Received Data from Bed: ${bed.name} | Temp: ${temperature}°C`);
+            console.log(`📡 Received Data from Bed: ${bed.name} | Temp: ${temperature}°C | Pressure: ${pressure}mmHg`);
             temperatureArray.push({temperature});
               if (temperatureArray.length > 10) {
                  temperatureArray.shift(); // Remove oldest entry
@@ -44,16 +46,28 @@ const mqttRun = ()=>{
               // This where the whole logic will come to 
             // 🚨 Check for High Temperature
             bed.lastTemperature = temperature;
+            bed.lastPressure = pressure;
             // bed.lastUpdated = new Date(); // optional field for tracking updates
             await bed.save();
 
-            if (temperature >= 30) {
-                console.log("⚠️ High temperature detected! Saving alert...");
+            let alertType = '';
+            let alertMsg = '';
+            if (temperature >= 50) {
+                alertType = 'High Temperature';
+                alertMsg = `Temperature exceeded safe limit (${temperature}°C)`;
+            } else if (pressure >= 40) {
+                alertType = 'High Pressure';
+                alertMsg = `Pressure exceeded safe threshold (${pressure})`;
+            }
+
+
+            if (alertType) {
+                console.log(alertMsg);
 
                 const newAlert = new Alert({
                     bedId: bed._id,  // ✅ Link alert to this bedId
-                    alert_type: "High Temperature",
-                    message: `Temperature exceeded`,
+                    alert_type: alertType,
+                    message: alertMsg,
                     macAddress: macAddress,
                     temperature: temperature,
                     status: "Active"
@@ -65,7 +79,7 @@ const mqttRun = ()=>{
                 // 🔥 Publish Alert to ESP32 Handband via MQTT
                 mqttClient.publish("smartbed/alerts", JSON.stringify({
                     macAddress: macAddress,
-                    message: "HIGH_TEMPERATURE"
+                    message: alertType.toUpperCase().replace(" ", "_")
                 }));
             }
         } catch (error) {
