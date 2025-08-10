@@ -143,13 +143,27 @@ const mqttRun = () => {
         console.log(`Received from ${bed.name} | Temps: ${temperatures} | Pressures: ${pressures}`);
 
         // Update sensor readings
-        bed.sensorReadings = temperatures.map((temp, index) => ({
-          sensor_id: index + 1,
-          location: sensorLocations[index] || `Sensor ${index + 1}`,
-          temperature: temp ?? null,
-          pressure: pressures[index] ?? null,
-        }));
-        await bed.save();
+        // bed.sensorReadings = temperatures.map((temp, index) => ({
+        //   sensor_id: index + 1,
+        //   location: sensorLocations[index] || `Sensor ${index + 1}`,
+        //   temperature: temp ?? null,
+        //   pressure: pressures[index] ?? null,
+        // }));
+        // await bed.save();
+         await Bed.findOneAndUpdate(
+          { macAddress },
+          {
+            $set: {
+              sensorReadings: temperatures.map((temp, index) => ({
+                sensor_id: index + 1,
+                location: sensorLocations[index] || `Sensor ${index + 1}`,
+                temperature: temp ?? null,
+                pressure: pressures[index] ?? null,
+              }))
+            }
+          },
+          { new: true } // Ensure we return the updated document
+        );
 
         // Check each sensor reading for alert conditions
         for (let i = 0; i < temperatures.length; i++) {
