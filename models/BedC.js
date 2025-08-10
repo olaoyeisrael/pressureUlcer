@@ -15,7 +15,8 @@ const bedSchema = new mongoose.Schema({
     // lastPressure: { type: Number },
     // lastTemperature: { type: Number },
     sensorReadings: [SensorReadingSchema], 
-    caregiverId: { type: Schema.Types.ObjectId, ref: 'user'}
+    // caregiverId: { type: mongoose.Schema.Types.ObjectId, ref: 'user'}
+    caregiverId: { type: mongoose.Schema.Types.ObjectId, ref: 'user' },
 })
 
 const Bed = mongoose.model('bed', bedSchema)

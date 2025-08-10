@@ -111,6 +111,7 @@ const sensorLocations = [
   "Right Knee",
   "Heel"
 ];
+const caregiverId = '681b86b7306c61e2bb112b63'
 
 const mqttRun = () => {
   const mqttClient = mqtt.connect("mqtt://broker.emqx.io");
@@ -134,6 +135,7 @@ const mqttRun = () => {
             name: `Bed_${macAddress.slice(-4)}`,
             macAddress,
             assigned: true,
+            caregiverId: caregiverId,
             sensorReadings: [],
           });
           await bed.save();
