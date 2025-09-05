@@ -14,7 +14,7 @@ const transporter = nodemailer.createTransport({
   }
 })
 
-const generateOtp = () => crypto.randomInt(10000, 999999).toString();
+const generateOtp = () => crypto.randomInt(1000, 10000).toString();
 
 exports.register = async (req, res) => {
   const { name, password } = req.body;
@@ -77,7 +77,7 @@ exports.verifyOTP = async(req, res) =>{
     user.otp = undefined;
     user.otpExpiry = undefined;
     await user.save()
-    const token = jwt.sign({ id: user._id },'my site secret could be anything', { expiresIn: '20s' });
+    const token = jwt.sign({ id: user._id },'my site secret could be anything', { expiresIn: '15m' });
     // const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET);
     const refreshToken = jwt.sign({ id: user._id }, process.env.REFRESH_SECRET);
     user.refreshToken = refreshToken;
@@ -104,7 +104,7 @@ exports.login = async (req, res) => {
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(400).json({ message: 'Invalid credentials' });
 
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '30s' });
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '15m' });
     // const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET);
     const refreshToken = jwt.sign({ id: user._id }, process.env.REFRESH_SECRET);
     user.refreshToken = refreshToken;
