@@ -14,8 +14,7 @@ app.use('/api/auth', require('./routes/auth.routes'));
 app.use('/api', mobileRoutes )
 
 port = process.env.PORT || 4000
-console.log(typeof[])
-console.log(null == undefined)
+console.log(Date.now())
 
 app.listen(port, ()=>{
     console.log(`App listening on port ${port}`)

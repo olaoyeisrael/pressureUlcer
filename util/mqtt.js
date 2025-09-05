@@ -106,10 +106,10 @@ const sensorLocations = [
   "Head",
   "Left Arm",
   "Right Arm",
-  "Buttock",
-  "Left Knee",
-  "Right Knee",
-  "Heel"
+  "Left Buttock",
+  "Right Buttock",
+  "Left Heel",
+  "Right Heel"
 ];
 const caregiverId = '681b86b7306c61e2bb112b63'
 
@@ -166,6 +166,7 @@ const mqttRun = () => {
           },
           { new: true } // Ensure we return the updated document
         );
+       const name = `Bed_${macAddress.slice(-4)}`
 
         // Check each sensor reading for alert conditions
         for (let i = 0; i < temperatures.length; i++) {
@@ -188,6 +189,7 @@ const mqttRun = () => {
             const newAlert = new Alert({
               bedId: bed._id,
               alert_type: alertType,
+              name: name,
               message: alertMsg,
               macAddress,
               sensorId: i + 1,
