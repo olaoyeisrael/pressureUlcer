@@ -5,8 +5,10 @@ const SensorReadingSchema = new mongoose.Schema({
   sensor_id: { type: Number, required: true },
   location: {type: String, require: true},
   temperature: { type: Number, default: null },
-  pressure: { type: Number, default: null }
-});
+  pressure: { type: Number, default: null },
+  thresholdStartTime: {type: Date,   default: null},
+  
+}, { _id: false });
 
 const bedSchema = new mongoose.Schema({
     name: { type: String, required: true, unique: true },

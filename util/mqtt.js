@@ -152,62 +152,87 @@ const mqttRun = () => {
         //   pressure: pressures[index] ?? null,
         // }));
         // await bed.save();
-         await Bed.findOneAndUpdate(
-          { macAddress },
-          {
-            $set: {
-              sensorReadings: temperatures.map((temp, index) => ({
-                sensor_id: index + 1,
-                location: sensorLocations[index] || `Sensor ${index + 1}`,
-                temperature: temp ?? null,
-                pressure: pressures[index] ?? null,
-              }))
-            }
-          },
-          { new: true } // Ensure we return the updated document
-        );
+
+
+        //  await Bed.findOneAndUpdate(
+        //   { macAddress },
+        //   {
+        //     $set: {
+        //       sensorReadings: temperatures.map((temp, index) => ({
+        //         sensor_id: index + 1,
+        //         location: sensorLocations[index] || `Sensor ${index + 1}`,
+        //         temperature: temp ?? null,
+        //         pressure: pressures[index] ?? null,
+        //       }))
+        //     }
+        //   },
+        //   { new: true } // Ensure we return the updated document
+        // );
+       const now = Date.now();
        const name = `Bed_${macAddress.slice(-4)}`
 
         // Check each sensor reading for alert conditions
         for (let i = 0; i < temperatures.length; i++) {
           const temp = temperatures[i];
           const pres = pressures[i];
-          let alertType = '';
-          let alertMsg = '';
+          let reading = bed.sensorReadings[i] || {};
+          const thresholdExceeded = temp >= 40 || pres >= 32;
+          // let alertType = '';
+          // let alertMsg = '';
+          if (thresholdExceeded) {
+            if (!reading.thresholdStartTime){
+              reading.thresholdStartTime = now;
+              console.log(`Sensor ${i + 1}: Threshold breached, timer started`);
+            }
+            else {
+              // Timer already running, check duration
+              const elapsed = now - reading.thresholdStartTime;
+              if (elapsed >= 2 * 60 * 60 * 1000) { // 2 hours
+                const alertType = temp >= 50 ? 'High Temperature' : 'High Pressure';
+                const alertMsg =
+                  temp >= 50
+                    ? `Sensor ${i + 1}: Temperature ${temp}°C exceeded safe limit for over 2 hours`
+                    : `Sensor ${i + 1}: Pressure ${pres}mmHg exceeded safe threshold for over 2 hours`;
 
-          if (temp >= 50) {
-            alertType = 'High Temperature';
-            alertMsg = `Sensor ${i + 1}: Temperature exceeded safe limit (${temp}°C)`;
-          } else if (pres >= 40) {
-            alertType = 'High Pressure';
-            alertMsg = `Sensor ${i + 1}: Pressure exceeded safe threshold (${pres})`;
-          }
+                console.log(alertMsg);
+                const newAlert = new Alert({
+                  bedId: bed._id,
+                  alert_type: alertType,
+                  name: name,
+                  message: alertMsg,
+                  macAddress,
+                  sensorId: i + 1,
+                  temperature: temp,
+                  pressure: pres,
+                  status: "Active"
+                });
+                await newAlert.save();
+    
 
-          if (alertType) {
-            console.log(alertMsg);
-
-            const newAlert = new Alert({
-              bedId: bed._id,
-              alert_type: alertType,
-              name: name,
-              message: alertMsg,
-              macAddress,
-              sensorId: i + 1,
-              temperature: temp,
-              pressure: pres,
-              status: "Active"
-            });
-
-            await newAlert.save();
+         
 
             mqttClient.publish("smartbed/alerts", JSON.stringify({
               macAddress,
               sensorId: i + 1,
               message: alertType.toUpperCase().replace(" ", "_")
             }));
+            reading.thresholdStartTime = null
           }
         }
-      } catch (error) {
+      } else{
+        reading.thresholdStartTime = null;
+      }
+       bed.sensorReadings[i] = {
+            ...reading,
+            sensor_id: i + 1,
+            location: sensorLocations[i] || `Sensor ${i + 1}`,
+            temperature: temp ?? null,
+            pressure: pres ?? null
+          };
+        }
+        await bed.save();
+      }
+      catch (error) {
         console.error("Error processing MQTT message:", error);
       }
     }
