@@ -126,6 +126,20 @@ const mqttRun = () => {
       try {
         const sensorData = JSON.parse(message.toString());
         const { macAddress, pressures = [], temperatures = [] } = sensorData;
+//        const adjustedPressures = pressures.map((p, i) => {
+//   if (i < 5) return p - 5;
+//   return p - 35;
+// });
+// const adjustedPressures = pressures.map((p, i) => {
+//   let adjusted = i < 5 ? p - 5 : p - 35;
+//   return adjusted < 0 ? 0 : adjusted;  // clamp negatives to 0
+// });
+const adjustedPressures = pressures.map((p, i) => {
+  let adjusted = i < 5 ? p - 5 : p - 35;
+  adjusted = adjusted < 0 ? 0 : adjusted;
+  return Number(adjusted.toFixed(2));  // round to 2 dp
+});
+
 
         let bed = await Bed.findOne({ macAddress });
 
@@ -142,7 +156,7 @@ const mqttRun = () => {
           console.log(`New bed assigned: ${bed.name} (MAC: ${macAddress})`);
         }
 
-        console.log(`Received from ${bed.name} | Temps: ${temperatures} | Pressures: ${pressures}`);
+        console.log(`Received from ${bed.name} | Temps: ${temperatures} | Pressures: ${adjustedPressures}`);
 
         // Update sensor readings
         // bed.sensorReadings = temperatures.map((temp, index) => ({
@@ -174,7 +188,7 @@ const mqttRun = () => {
         // Check each sensor reading for alert conditions
         for (let i = 0; i < temperatures.length; i++) {
           const temp = temperatures[i];
-          const pres = pressures[i];
+          const pres = adjustedPressures[i];
           let reading = bed.sensorReadings[i] || {};
           const thresholdExceeded = temp >= 40 || pres >= 32;
           // let alertType = '';
